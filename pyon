@@ -137,7 +137,7 @@ def complete(code):
         output += quote
     for bracket in brackets[::-1]:
         output += otoc[bracket]
-    return output
+    return "src = " + repr(code) + "\n" + output
 
 def sub_macros(code, macros):
     output = ""
@@ -169,4 +169,8 @@ def add_macros(code):
 def run(code, *args):
     finish_exec(pre_exec(complete(add_macros(code))), list(args))
 
-run(open(sys.argv[1], "r").read(), *sys.argv[2:])
+if sys.argv[1] == "\\input":
+    file = sys.stdin
+else:
+    file = open(sys.argv[1], "r")
+run(file.read(), *sys.argv[2:])
