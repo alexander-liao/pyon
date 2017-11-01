@@ -28,7 +28,7 @@ def finish_exec(code, args):
         else:
             raise NotImplemented
     except NameError as e:
-        name = e.message[6:-16]
+        name = (e.message if 1 / 2 == 0 else e.args[0])[6:-16]
         if has_import(name):
             finish_exec("import " + name + "\n" + code, args)
         else:
@@ -169,4 +169,4 @@ def add_macros(code):
 def run(code, *args):
     finish_exec(pre_exec(complete(add_macros(code))), list(args))
 
-run(open(sys.argv[1], "r").read())
+run(open(sys.argv[1], "r").read(), *sys.argv[2:])
