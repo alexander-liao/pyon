@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+
+import re, sys
+
+def has_import(name):
+    try:
+        __import__(name)
+    except:
+        return False
+    return True
+
+def can_eval(code):
+    try:
+        eval(code)
+    except:
+        return False
+    return True
+
+def finish_exec(code, args):
+    try:
+        exec(code)
+    except IndentationError as e:
+        if e[0].startswith("unexpected"):
+            lines = code.split("\n")
+            line = e[1][1]
+            lines[line - 1] = lines[line - 1][1:]
+            finish_exec("\n".join(lines), args)
+        else:
+            raise NotImplemented
+    except NameError as e:
+        name = e.message[6:-16]
+        if has_import(name):
+            finish_exec("import " + name + "\n" + code, args)
+        else:
+            if args:
+                arg = args.pop(0)
+            else:
+                try:
+                    arg = raw_input() if 1 / 2 == 0 else input()
+                except EOFError:
+                    arg = "0"
+            finish_exec(name + " = " + (arg if can_eval(arg) else repr(arg)) + "\n" + code, args)
+
+def pre_exec(code):
+    return "from math import *\nfrom itertools import *\nfrom operator import *\n" + code
+
+otoc = {
+    "(": ")",
+    "[": "]",
+    "{": "}",
+}
+
+ctoo = {
+    ")": "(",
+    "]": "[",
+    "}": "{",
+}
+
+ops = {
+    "+":  "add",
+    "-":  "sub",
+    "**": "pow",
+    "*":  "mul",
+    "//": "floordiv",
+    "==": "eq",
+    "!=": "ne",
+    "/":  "truediv",
+}
+
+def complete(code):
+    brackets = []
+    locations = []
+    index = 0
+    quote = ""
+    escape = False
+    output = ""
+    line_start = True
+    while index < len(code):
+        line_start = index == 0 or code[index - 1] == "\n"
+        if quote:
+            if escape:
+                escape = False
+                output += code[index]
+            elif code[index] == "\\":
+                escape = True
+                output += code[index]
+            elif code[index:index + len(quote)] == quote:
+                output += code[index:index + len(quote)]
+                index += len(quote) - 1
+                quote = ""
+            elif code[index] == "\n":
+                output += "\\n"
+            else:
+                output += code[index]
+        elif code[index] == "@":
+            if not re.match("\w", code[index + 1]):
+                index += 1
+                op = re.match("(" + "|".join(map(re.escape, ops)) + ")", code[index:]).group()
+                index += len(op) - 1
+                output += ops[op]
+        elif code[index] == "#":
+            while index < len(code) and code[index] != "\n":
+                index += 1
+        elif code[index:index + 3] in ['"""', "'''"]:
+            quote = code[index:index + 3]
+            output += code[index:index + 3]
+            index += 2
+        elif code[index] in ['"', "'"]:
+            quote = code[index]
+            output += code[index]
+        elif code[index] in otoc:
+            brackets.append(code[index])
+            locations.append(len(output))
+            output += code[index]
+        elif code[index] in ctoo:
+            if brackets and ctoo[code[index]] == brackets[-1]:
+                brackets.pop()
+                locations.pop()
+                output += code[index]
+            elif ctoo[code[index]] in brackets:
+                while brackets[-1] != ctoo[code[index]]:
+                    output += otoc[brackets.pop()]
+                    locations.pop()
+            else:
+                location = locations[-1] + 1
+                output = output[:location] + ctoo[code[index]] + output[location:]
+                output += code[index]
+        elif code[index] == "\n":
+            for bracket in brackets[::-1]:
+                output += otoc[bracket]
+            output += "\n"
+            brackets = []
+        else:
+            output += code[index]
+        index += 1
+    if quote:
+        output += quote
+    for bracket in brackets[::-1]:
+        output += otoc[bracket]
+    return output
+
+def sub_macros(code, macros):
+    output = ""
+    macro = ""
+    for char in code:
+        if macro:
+            if char in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_":
+                macro += char
+            else:
+                output += macros[macro] + char
+                macro = ""
+        else:
+            if char == "$":
+                macro = "$"
+            else:
+                output += char
+    return output
+
+def add_macros(code):
+    pattern = re.compile(r"(\$[A-Za-z_]+) ?(.+)")
+    macros = dict(pattern.match(line).groups() for line in code.split("\n") if pattern.match(line))
+    code = "\n".join(line for line in code.split("\n") if not pattern.match(line))
+    old = ""
+    while old != code:
+        old = code
+        code = sub_macros(code, macros)
+    return code
+
+def run(code, *args):
+    finish_exec(pre_exec(complete(add_macros(code))), list(args))
+
+run(open(sys.argv[1], "r").read())
