@@ -1,6 +1,10 @@
 # Pyon
 Pyon is an extended Python interpreter inspired by ARBLE (A Rather Brief Lua Extension) by @ATaco. It is very inefficient compared to ARBLE because of the differences between Python and Lua's semantics, but in principle it serves the same purpose, which is to make a production language better suited for golfing purposes.
 
+# Usage
+
+    ./pyon <filename>
+
 # Features
 
 ### Partial Evaluation
