@@ -2,6 +2,82 @@
 
 import re, sys
 
+builtins = {
+
+    'ab':'abs',
+    'ac':'ascii',
+    'al':'all',
+    'an':'any',
+    'ba':'bytearray',
+    'bi':'bin',
+    'bo':'bool',
+    'by':'bytes',
+    'ca':'callable',
+    'ch':'chr',
+    'ci':'compile',
+    'cl':'classmethod',
+    'co':'copyright',
+    'cr':'credits',
+    'cx':'complex',
+    'dc':'dict',
+    'de':'delattr',
+    'dr':'dir',
+    'dv':'divmod',
+    'en':'enumerate',
+    'et':'exit',
+    'ev':'eval',
+    'ex':'exec',
+    'fi':'filter',
+    'fl':'float',
+    'fo':'format',
+    'fr':'frozenset',
+    'ge':'getattr',
+    'gl':'globals',
+    'hh':'hash',
+    'hl':'help',
+    'hs':'hasattr',
+    'hx':'hex',
+    'ic':'issubclass',
+    'id':'id',
+    'ii':'isinstance',
+    'ip':'input',
+    'it':'int',
+    'ir':'iter',
+    'le':'len',
+    'lc':'license',
+    'lo':'locals',
+    'ls':'list',
+    'me':'memoryview',
+    'mi':'min',
+    'mp':'map',
+    'mx':'max',
+    'ne':'next',
+    'ob':'object',
+    'oc':'oct',
+    'od':'ord',
+    'op':'open',
+    'po':'property',
+    'pr':'print',
+    'pw':'pow',
+    'qu':'quit',
+    'ra':'range',
+    'ro':'round',
+    'rp':'repr',
+    'rv':'reverse',
+    'sa':'setattr',
+    'sc':'staticmethod',
+    'sl':'slice',
+    'sm':'sum',
+    'so':'sorted',
+    'sr':'str',
+    'st':'set',
+    'su':'super',
+    'tu':'tuple',
+    'ty':'type',
+    'va':'vars',
+    'zi':'zip',
+}
+
 def has_import(name):
     try:
         __import__(name)
@@ -16,9 +92,27 @@ def can_eval(code):
         return False
     return True
 
+def make_builtins(string):
+    head = '\n'.join(string.split('\n')[:4])
+    string = list('\n'.join(string.split('\n')[4:]))
+    for sb, vb in builtins.items():
+        vb += '('
+        for i in range(len(string)-3):
+            char, nx1, nx2 = string[i:i+3]
+            nchr, nxn, ncn = sb + '('
+            if nx2 != '(': continue
+            b = (char == nchr and nx1 == nxn and nx2 == ncn)
+            if b:
+                for j in range(len(vb)):
+                    if j > 2:
+                        string.insert(i+j, vb[j])
+                    else:
+                        string[i+j] = vb[j]
+    return head + '\n' + ''.join(string)
+
 def finish_exec(code, args):
     try:
-        exec(code)
+        exec(make_builtins(code))
     except IndentationError as e:
         if e[0].startswith("unexpected"):
             lines = code.split("\n")
@@ -157,7 +251,7 @@ def sub_macros(code, macros):
     return output
 
 def add_macros(code):
-    pattern = re.compile(r"(\$[A-Za-z_]+) ?(.+)")
+    pattern = re.compile(r"(\$[A-Za-z_]+)\?(.+)")
     macros = dict(pattern.match(line).groups() for line in code.split("\n") if pattern.match(line))
     code = "\n".join(line for line in code.split("\n") if not pattern.match(line))
     old = ""
