@@ -251,7 +251,7 @@ def sub_macros(code, macros):
     return output
 
 def add_macros(code):
-    pattern = re.compile(r"(\$[A-Za-z_]+)\?(.+)")
+    pattern = re.compile(r"(\$[A-Za-z_]+) ?(.+)")
     macros = dict(pattern.match(line).groups() for line in code.split("\n") if pattern.match(line))
     code = "\n".join(line for line in code.split("\n") if not pattern.match(line))
     old = ""
