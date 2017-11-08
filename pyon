@@ -108,6 +108,7 @@ def make_builtins(string):
                         string.insert(i+j, vb[j])
                     else:
                         string[i+j] = vb[j]
+    string = string.replace('=>', 'lambda ')
     return head + '\n' + ''.join(string)
 
 def finish_exec(code, args):
